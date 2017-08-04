@@ -39,6 +39,8 @@ public class ProcessManager {
     static final ReentrantLock lock = new ReentrantLock();
     static TreeMap<String, JobInfoTrack> running = new TreeMap<>();
 
+    public static String[] cmd_setup;
+    
     static void usage() {
         System.err.println("usage: ");
         System.err.println("nohup java -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=3 -XX:GCLogFileSize=16m -Xloggc:log/gc.log -verbose:gc -XX:+PrintGCDateStamps -Xmx128m -jar krawn.jar krawn.conf > it 2>&1 & ");
@@ -50,6 +52,16 @@ public class ProcessManager {
         if ( args.length != 1 ) {
             usage();
         }
+        
+        if ( System.getProperty("os.name").toLowerCase().contains("win") ) {
+            cmd_setup = new String[] {"cmd.exe", "/C"};
+        } else {
+            cmd_setup = new String[] {"/bin/bash", "-c"};
+        }
+        
+        log.info(System.getProperty("os.name"));
+        
+        
         if ( !Files.exists(Paths.get(args[0])) ) {
             System.err.println("Cannot find config file: " + args[0]);
             usage();

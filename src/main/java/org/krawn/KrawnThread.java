@@ -52,6 +52,9 @@ public class KrawnThread extends Thread {
                         ProcessManager.lock.unlock();
                     }
 
+                    //
+                    // run jobs
+                    //
                     for (CronJobConfig c : ProcessManager.listholder.get().values()) {
                         ProcessManager.lock.lock();
                         try {
@@ -63,7 +66,7 @@ public class KrawnThread extends Thread {
                                 if (c.schedule.hit(bitCheck)) {
                                     JobInfoTrack j = new JobInfoTrack(System.currentTimeMillis(), c);
                                     ProcessManager.running.put(c.name, j);
-                                    log.info("immediate run: " + c.name);
+                                    log.info("Run: " + c.name + " cmd: " + c.command);
                                     runJob(j);
                                     run++;
                                 }
@@ -82,6 +85,9 @@ public class KrawnThread extends Thread {
                     if ( log.isDebugEnabled() )
                         log.info("pass time: " + (timeofsleep - now));
                     
+                    //
+                    // Thread.sleep can wake up early so you must spin until you get to the finish line
+                    //
                     while (wakeuptime - timeofsleep > 0) {
                         if (log.isDebugEnabled())
                             log.debug("sleeping for " + (wakeuptime - timeofsleep));
@@ -105,7 +111,13 @@ public class KrawnThread extends Thread {
     public static void runJob(JobInfoTrack j) {
 
         try {
-            StartedProcess startProc = new ProcessExecutor().command(j.cron.command).redirectOutput(Slf4jStream.of(j.cron.name).asInfo())
+            String[] cmd = new String[3];
+            for (int i = 0; i < cmd.length-1; i++) {
+                cmd[i] = ProcessManager.cmd_setup[i];
+            }
+            cmd[2] = j.cron.command;
+            
+            StartedProcess startProc = new ProcessExecutor().command(cmd).redirectOutput(Slf4jStream.of(j.cron.name).asInfo())
                     .redirectError(Slf4jStream.of(j.cron.name).asError()).start();
             j.startedProc = startProc;
         } catch (IOException e) {
