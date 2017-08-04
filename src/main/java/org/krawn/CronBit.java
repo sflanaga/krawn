@@ -72,13 +72,22 @@ public class CronBit {
         try {
             String commaEntries[] = timeSpec.split(",");
             for (int i = 0; i < commaEntries.length; i++) {
-                String rangeEntries[] = commaEntries[i].split("-");
+                String intervaledEntries[] = commaEntries[i].split("/");
+                int interval = 1;
+                if (intervaledEntries.length == 2) {
+                    interval = Integer.decode(intervaledEntries[1]);
+                }
+                String rangeEntries[] = intervaledEntries[0].split("-");
                 if (rangeEntries.length < 2) {
-                    Integer rangeLo = Integer.decode(rangeEntries[0]);
-                    if (rangeLo.intValue() > hi_check || rangeLo.intValue() < lo_check)
-                        throw new RuntimeException(
-                                "The timespec for " + msg + " has an entry outside the expect range of " + lo_check + " to " + hi_check + ", timespec:" + timeSpec);
-                    tmp |= base << rangeLo;
+                    if ( rangeEntries[0].equals("*") ) {
+                        tmp += populateSet(lo_check, hi_check, base, interval);
+                    } else {
+                        Integer rangeLo = Integer.decode(rangeEntries[0]);
+                        if (rangeLo.intValue() > hi_check || rangeLo.intValue() < lo_check)
+                            throw new RuntimeException(
+                                    "The timespec for " + msg + " has an entry outside the expect range of " + lo_check + " to " + hi_check + ", timespec:" + timeSpec);
+                        tmp |= base << rangeLo;
+                    }
                 } else if (rangeEntries.length == 2) {
                     Integer rangeLo = Integer.decode(rangeEntries[0]);
                     Integer rangeHi = Integer.decode(rangeEntries[1]);
@@ -94,7 +103,7 @@ public class CronBit {
                     if (rangeLo.intValue() >= rangeHi.intValue())
                         throw new RuntimeException("The timespec for " + msg + " has an entry in which the low entry is higher than the high entry");
 
-                    tmp |= populateSet(rangeLo.intValue(), rangeHi.intValue(), base);
+                    tmp |= populateSet(rangeLo.intValue(), rangeHi.intValue(), base, interval);
                 } else
                     throw new RuntimeException("The timespec for " + msg + " has a range with only one entry, timespec:" + timeSpec);
             }
@@ -109,9 +118,10 @@ public class CronBit {
         return String.format("CronBit [origCron=%s, moy=%x, doM=%x, dow=%x, seconds=%x, minutes=%x, hours=%x]", origCron, moy, doM, dow, seconds, minutes, hours);
     }
 
-    private long populateSet(int lo, int hi, long base) {
+    private long populateSet(int lo, int hi, long base, int interval) {
         long tmp = 0L;
-        for (int i = lo; i < hi + 1; i++) {
+        for (int i = lo; i < hi + 1; i+=interval) {
+            log.info("pop: " + i);
             tmp |= base << i;
         }
         return tmp;
@@ -148,14 +158,14 @@ public class CronBit {
     }
 
     public boolean hit(BitCheck now) {
-        if ( doM == 1 ) {
+        if (doM == 1) {
             // special check for last day of month which is zero
-            if ( now.dom_normal != now.dom_last )
+            if (now.dom_normal != now.dom_last)
                 return false;
             // take out nromal dom bit check as last day worked for us here
             else if ((now.sec & seconds) > 0 && (now.min & minutes) > 0 && (now.hour & hours) > 0 && (now.dow & dow) > 0 && (now.moy & moy) > 0)
                 return true;
-            else 
+            else
                 return false;
 
             // else virtually true if other check out too
@@ -185,9 +195,8 @@ public class CronBit {
 
     public static void main(String[] args) {
         try {
- //           testCase("2017/07/08-23:15:03", "* * * *");
-            
-            
+            // testCase("2017/07/08-23:15:03", "* * * *");
+
             testCase("2017/08/31-23:15:02", "2 15 23 * * 8");
         } catch (ParseException e) {
             // TODO Auto-generated catch block

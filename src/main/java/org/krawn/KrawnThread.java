@@ -2,6 +2,9 @@ package org.krawn;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -21,6 +24,16 @@ public class KrawnThread extends Thread {
     public void run() {
         long lastrun = 0L;
         long baseSleepTime = 1000L;
+        LinkedBlockingQueue<JobInfoTrack> jobQueue = new LinkedBlockingQueue<>();
+
+        
+        RunJobThread[] runthreads = new RunJobThread[4];
+        for (int i = 0; i < runthreads.length; i++) {
+            runthreads[i] = new RunJobThread(jobQueue);
+            runthreads[i].setDaemon(true);
+            runthreads[i].start();
+        }
+        
         while (true)
 
             try {
@@ -67,7 +80,7 @@ public class KrawnThread extends Thread {
                                     JobInfoTrack j = new JobInfoTrack(System.currentTimeMillis(), c);
                                     ProcessManager.running.put(c.name, j);
                                     log.info("Run: " + c.name + " cmd: " + c.command);
-                                    runJob(j);
+                                    jobQueue.put(j);
                                     run++;
                                 }
                             }
@@ -82,9 +95,9 @@ public class KrawnThread extends Thread {
                     long timeofsleep = System.currentTimeMillis();
                     long wakeuptime = ((timeofsleep / baseSleepTime + 1) * baseSleepTime);
 
-                    if ( log.isDebugEnabled() )
+                    if (log.isDebugEnabled())
                         log.info("pass time: " + (timeofsleep - now));
-                    
+
                     //
                     // Thread.sleep can wake up early so you must spin until you get to the finish line
                     //
@@ -108,22 +121,39 @@ public class KrawnThread extends Thread {
             }
     }
 
-    public static void runJob(JobInfoTrack j) {
+    //
+    // these threads exist to keep the primary scheduler on time
+    // when there are 1000 processes scheduled (only linux really supports that)
+    //
+    public static class RunJobThread extends Thread {
+        private final LinkedBlockingQueue<JobInfoTrack> jobQueue;
 
-        try {
-            String[] cmd = new String[3];
-            for (int i = 0; i < cmd.length-1; i++) {
-                cmd[i] = ProcessManager.cmd_setup[i];
-            }
-            cmd[2] = j.cron.command;
-            
-            StartedProcess startProc = new ProcessExecutor().command(cmd).redirectOutput(Slf4jStream.of(j.cron.name).asInfo())
-                    .redirectError(Slf4jStream.of(j.cron.name).asError()).start();
-            j.startedProc = startProc;
-        } catch (IOException e) {
-            log.error("IO except during proc start for: " + j.cron.name + " command: " + j.cron.command);
+        public RunJobThread(LinkedBlockingQueue<JobInfoTrack> jobQueue) {
+            this.jobQueue = jobQueue;
         }
-
+        @Override
+        public void run() {
+            while (true) {
+                JobInfoTrack j=null;
+                try {
+                    j = jobQueue.take();
+                    try {
+                        String[] cmd = new String[3];
+                        for (int i = 0; i < cmd.length - 1; i++) {
+                            cmd[i] = ProcessManager.cmd_setup[i];
+                        }
+                        cmd[2] = j.cron.command;
+                        StartedProcess startProc = new ProcessExecutor().environment(j.cron.env).command(cmd).redirectOutput(Slf4jStream.of(j.cron.name).asInfo()).redirectError(Slf4jStream.of(j.cron.name).asError())
+                                .start();
+                        j.startedProc = startProc;
+                    } catch (IOException e) {
+                        log.error("IO except during proc start for: " + j.cron.name + " command: " + j.cron.command);
+                    }
+                } catch (Throwable e) {
+                    log.error("Exceptiong during proc start for: " + j.cron.name + " command: " + j.cron.command);
+                }
+            }
+        }
     }
 
 }
