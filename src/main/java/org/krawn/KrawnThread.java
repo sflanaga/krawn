@@ -3,6 +3,8 @@ package org.krawn;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.krawn.ProcessManager.JobInfoTrack;
 import org.krawn.util.Util;
 import org.slf4j.Logger;
@@ -14,17 +16,22 @@ import org.zeroturnaround.exec.stream.slf4j.Slf4jStream;
 public class KrawnThread extends Thread {
     static Logger log = LoggerFactory.getLogger(KrawnThread.class);
     private final long slop = 800L;
+
     @Override
     public void run() {
+        long lastrun = 0L;
+        long baseSleepTime = 1000L;
         while (true)
 
             try {
                 long now = System.currentTimeMillis();
+                CronBit.BitCheck bitCheck = new CronBit.BitCheck(new DateTime(now, DateTimeZone.UTC));
+
                 if (ProcessManager.listholder.get() != null) {
 
-                    int dead=0, pend=0, run=0;
+                    int dead = 0, run = 0;
                     //
-                    // clean out old expired - self expired jobs
+                    // clean out old expired - regular exited jobs
                     //
                     ArrayList<JobInfoTrack> deadProc = new ArrayList<>();
                     for (JobInfoTrack runningJob : ProcessManager.running.values()) {
@@ -36,7 +43,8 @@ public class KrawnThread extends Thread {
                     ProcessManager.lock.lock();
                     try {
                         for (JobInfoTrack deadJob : deadProc) {
-                            log.info(deadJob.cron.name + " finished in " + Util.longSpanToStringShort(now-deadJob.startTime, 2) + " exit code: " + deadJob.startedProc.getProcess().exitValue());
+                            log.info(deadJob.cron.name + " finished in " + Util.longSpanToStringShort(now - deadJob.startTime, 2) + " exit code: "
+                                    + deadJob.startedProc.getProcess().exitValue());
                             ProcessManager.running.remove(deadJob.cron.name);
                             dead++;
                         }
@@ -48,51 +56,38 @@ public class KrawnThread extends Thread {
                         ProcessManager.lock.lock();
                         try {
                             //
-                            // find jobs that need to be put into pending
-                            // we use pending so we save the cost of time computation on
-                            // later passes
+                            // find jobs that need to be run now
                             //
-                            JobInfoTrack pendJob = ProcessManager.pending.get(c.name);
-                            if (pendJob == null) {
-                                if (!ProcessManager.running.containsKey(c.name)) {
-                                    long next = c.schedule.nextRun(now);
-                                    JobInfoTrack j = new JobInfoTrack(next, c);
-                                    if (Math.abs(next - now) < slop) {
-                                        ProcessManager.running.put(c.name, j);
-                                        log.info("immediate run: " + c.name);
-                                        runJob(j);
-                                        run++;
-                                    } else {
-                                        log.info("pending: " + c.name);
-                                        ProcessManager.pending.put(c.name, j);
-                                        pend++;
-                                    }
-                                }
-                            } else {
-                                if (!ProcessManager.running.containsKey(c.name)) {
-                                    if (Math.abs(pendJob.startTime - now) < slop) {
-                                        log.info("running pending: " + c.name);
-                                        ProcessManager.pending.remove(pendJob.cron.name);
-                                        ProcessManager.running.put(c.name, pendJob);
-                                        runJob(pendJob);
-                                        run++;
-                                    }
+                            JobInfoTrack runningJob = ProcessManager.running.get(c.name);
+                            if (runningJob == null || !c.exclusive) {
+                                if (c.schedule.hit(bitCheck)) {
+                                    JobInfoTrack j = new JobInfoTrack(System.currentTimeMillis(), c);
+                                    ProcessManager.running.put(c.name, j);
+                                    log.info("immediate run: " + c.name);
+                                    runJob(j);
+                                    run++;
                                 }
                             }
                         } finally {
                             ProcessManager.lock.unlock();
                         }
                     }
-                    if ( dead >0 || pend > 0 || run > 0 )
-                        if ( log.isDebugEnabled())
-                            log.debug("Job state changes: dead: " + dead + " pended: " + pend + " run: " + run + " pending: " + ProcessManager.pending.size() + " running: " + ProcessManager.running.size());
-                    
-                    long timeofsleep = System.currentTimeMillis();
-                    long sleeptime = (timeofsleep / 1000L + 1) * 1000L - timeofsleep;
-                    if ( log.isDebugEnabled() )
-                        log.debug("sleeping for " + sleeptime + " pass time: " + (timeofsleep - now));
+                    if (dead > 0 || run > 0)
+                        if (log.isDebugEnabled())
+                            log.debug("Job state changes: dead: " + dead + " run: " + run + " running: " + ProcessManager.running.size());
 
-                    Thread.sleep(sleeptime);
+                    long timeofsleep = System.currentTimeMillis();
+                    long wakeuptime = ((timeofsleep / baseSleepTime + 1) * baseSleepTime);
+
+                    if ( log.isDebugEnabled() )
+                        log.info("pass time: " + (timeofsleep - now));
+                    
+                    while (wakeuptime - timeofsleep > 0) {
+                        if (log.isDebugEnabled())
+                            log.debug("sleeping for " + (wakeuptime - timeofsleep));
+                        Thread.sleep(wakeuptime - timeofsleep);
+                        timeofsleep = System.currentTimeMillis();
+                    }
                 } else {
                     Thread.sleep(100L); // fast sleep waiting for initial config
                 }
@@ -106,10 +101,10 @@ public class KrawnThread extends Thread {
                 log.error("SERVER error ", e);
             }
     }
+
     public static void runJob(JobInfoTrack j) {
 
         try {
-            log.info("starting " + j.cron.name);
             StartedProcess startProc = new ProcessExecutor().command(j.cron.command).redirectOutput(Slf4jStream.of(j.cron.name).asInfo())
                     .redirectError(Slf4jStream.of(j.cron.name).asError()).start();
             j.startedProc = startProc;
@@ -118,6 +113,5 @@ public class KrawnThread extends Thread {
         }
 
     }
-
 
 }

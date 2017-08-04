@@ -6,14 +6,14 @@ import com.typesafe.config.Config;
 
 public class CronJobConfig {
     final public String name;
-    final public SimpleCron schedule;
+    final public CronBit schedule;
     final public String[] command;
     final public long timeoutms;
     final public boolean exclusive;
 
     public CronJobConfig(final Config c) {
         this.name = c.getString("name");
-        this.schedule = new SimpleCron(c.getString("schedule"));
+        this.schedule = new CronBit(c.getString("schedule"));
         this.command = c.getString("command").split("\\s+");
         this.timeoutms = c.getDuration("timeout", TimeUnit.MILLISECONDS);
         this.exclusive = c.getBoolean("exclusive");

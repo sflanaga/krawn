@@ -13,6 +13,12 @@ import org.zeroturnaround.process.Processes;
 public class ReaperThread extends Thread {
     static Logger log = LoggerFactory.getLogger(ReaperThread.class);
 
+    final long sleepTime;
+    
+    public ReaperThread(long sleeptime) {
+        this.sleepTime = sleeptime;
+    }
+    
     @Override
     public void run() {
 
@@ -25,7 +31,8 @@ public class ReaperThread extends Thread {
                     ProcessManager.lock.lock();
                     try {
                         for (JobInfoTrack job : ProcessManager.running.values())
-                            tocheck.add(job);
+                            if ( job.startedProc != null )
+                                tocheck.add(job);
 
                     } finally {
                         ProcessManager.lock.unlock();
@@ -53,7 +60,7 @@ public class ReaperThread extends Thread {
             }
             
             try {
-                Thread.sleep(5000L);
+                Thread.sleep(1000L);
             } catch (InterruptedException e) {
                 break;
             }
