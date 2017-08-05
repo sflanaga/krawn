@@ -1,5 +1,6 @@
 package org.krawn;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,14 +27,13 @@ public class KrawnThread extends Thread {
         long baseSleepTime = 1000L;
         LinkedBlockingQueue<JobInfoTrack> jobQueue = new LinkedBlockingQueue<>();
 
-        
         RunJobThread[] runthreads = new RunJobThread[4];
         for (int i = 0; i < runthreads.length; i++) {
             runthreads[i] = new RunJobThread(jobQueue);
             runthreads[i].setDaemon(true);
             runthreads[i].start();
         }
-        
+
         while (true)
 
             try {
@@ -131,10 +131,11 @@ public class KrawnThread extends Thread {
         public RunJobThread(LinkedBlockingQueue<JobInfoTrack> jobQueue) {
             this.jobQueue = jobQueue;
         }
+
         @Override
         public void run() {
             while (true) {
-                JobInfoTrack j=null;
+                JobInfoTrack j = null;
                 try {
                     j = jobQueue.take();
                     try {
@@ -143,8 +144,8 @@ public class KrawnThread extends Thread {
                             cmd[i] = ProcessManager.cmd_setup[i];
                         }
                         cmd[2] = j.cron.command;
-                        StartedProcess startProc = new ProcessExecutor().environment(j.cron.env).command(cmd).redirectOutput(Slf4jStream.of(j.cron.name).asInfo()).redirectError(Slf4jStream.of(j.cron.name).asError())
-                                .start();
+                        StartedProcess startProc = new ProcessExecutor().directory(new File(j.cron.workingDir)).environment(j.cron.env).command(cmd)
+                                .redirectOutput(Slf4jStream.of(j.cron.name).asInfo()).redirectError(Slf4jStream.of(j.cron.name).asError()).start();
                         j.startedProc = startProc;
                     } catch (IOException e) {
                         log.error("IO except during proc start for: " + j.cron.name + " command: " + j.cron.command);

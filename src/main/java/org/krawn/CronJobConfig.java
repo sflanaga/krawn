@@ -14,6 +14,7 @@ public class CronJobConfig {
     final public String command;
     final public long timeoutms;
     final public boolean exclusive;
+    final public String workingDir;
     final Map<String, String> env;
 
     public CronJobConfig(final Config c) {
@@ -22,7 +23,8 @@ public class CronJobConfig {
         this.command = c.getString("command");
         this.timeoutms = c.getDuration("timeout", TimeUnit.MILLISECONDS);
         this.exclusive = c.getBoolean("exclusive");
-
+        this.workingDir = c.getString("workingDir");
+        
         env = new HashMap();
         if (c.hasPath("env")) {
             Set<Map.Entry<String, ConfigValue>> s = c.getConfig("env").entrySet();
