@@ -14,8 +14,8 @@ import org.zeroturnaround.exec.StartedProcess;
 
 import uk.org.lidalia.sysoutslf4j.context.SysOutOverSLF4J;
 
-public class ProcessManager {
-    static Logger log = LoggerFactory.getLogger(ProcessManager.class);
+public class KrawnManager {
+    static Logger log = LoggerFactory.getLogger(KrawnManager.class);
 
     static AtomicReference<TreeMap<String, CronJobConfig>> listholder = new AtomicReference<TreeMap<String, CronJobConfig>>();
 

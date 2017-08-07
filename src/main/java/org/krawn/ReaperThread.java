@@ -3,7 +3,7 @@ package org.krawn;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
-import org.krawn.ProcessManager.JobInfoTrack;
+import org.krawn.KrawnManager.JobInfoTrack;
 import org.krawn.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,17 +25,17 @@ public class ReaperThread extends Thread {
         while (true) {
 
             try {
-                if (ProcessManager.running != null) {
+                if (KrawnManager.running != null) {
                     long now = System.currentTimeMillis();
                     ArrayList<JobInfoTrack> tocheck = new ArrayList<>();
-                    ProcessManager.lock.lock();
+                    KrawnManager.lock.lock();
                     try {
-                        for (JobInfoTrack job : ProcessManager.running.values())
+                        for (JobInfoTrack job : KrawnManager.running.values())
                             if ( job.startedProc != null )
                                 tocheck.add(job);
 
                     } finally {
-                        ProcessManager.lock.unlock();
+                        KrawnManager.lock.unlock();
                     }
                     for (JobInfoTrack job : tocheck) {
                         long delta = now - job.startTime;

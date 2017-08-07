@@ -9,7 +9,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.krawn.ProcessManager.JobInfoTrack;
+import org.krawn.KrawnManager.JobInfoTrack;
 import org.krawn.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,59 +38,59 @@ public class KrawnThread extends Thread {
 
             try {
                 long now = System.currentTimeMillis();
-                CronBit.BitCheck bitCheck = new CronBit.BitCheck(new DateTime(now, DateTimeZone.UTC));
 
-                if (ProcessManager.listholder.get() != null) {
+                if (KrawnManager.listholder.get() != null) {
 
                     int dead = 0, run = 0;
                     //
                     // clean out old expired - regular exited jobs
                     //
                     ArrayList<JobInfoTrack> deadProc = new ArrayList<>();
-                    for (JobInfoTrack runningJob : ProcessManager.running.values()) {
+                    for (JobInfoTrack runningJob : KrawnManager.running.values()) {
                         if (runningJob.startedProc != null && !runningJob.startedProc.getProcess().isAlive()) {
                             deadProc.add(runningJob);
                         }
                     }
 
-                    ProcessManager.lock.lock();
+                    KrawnManager.lock.lock();
                     try {
                         for (JobInfoTrack deadJob : deadProc) {
                             log.info(deadJob.cron.name + " finished in " + Util.longSpanToStringShort(now - deadJob.startTime, 2) + " exit code: "
                                     + deadJob.startedProc.getProcess().exitValue());
-                            ProcessManager.running.remove(deadJob.cron.name);
+                            KrawnManager.running.remove(deadJob.cron.name);
                             dead++;
                         }
                     } finally {
-                        ProcessManager.lock.unlock();
+                        KrawnManager.lock.unlock();
                     }
 
                     //
                     // run jobs
                     //
-                    for (CronJobConfig c : ProcessManager.listholder.get().values()) {
-                        ProcessManager.lock.lock();
+                    for (CronJobConfig c : KrawnManager.listholder.get().values()) {
+                        KrawnManager.lock.lock();
                         try {
                             //
                             // find jobs that need to be run now
                             //
-                            JobInfoTrack runningJob = ProcessManager.running.get(c.name);
+                            JobInfoTrack runningJob = KrawnManager.running.get(c.name);
                             if (runningJob == null || !c.exclusive) {
+                                CronBit.BitCheck bitCheck = new CronBit.BitCheck(new DateTime(now, c.tz));
                                 if (c.schedule.hit(bitCheck)) {
                                     JobInfoTrack j = new JobInfoTrack(System.currentTimeMillis(), c);
-                                    ProcessManager.running.put(c.name, j);
+                                    KrawnManager.running.put(c.name, j);
                                     log.info("Run: " + c.name + " cmd: " + c.command);
                                     jobQueue.put(j);
                                     run++;
                                 }
                             }
                         } finally {
-                            ProcessManager.lock.unlock();
+                            KrawnManager.lock.unlock();
                         }
                     }
                     if (dead > 0 || run > 0)
                         if (log.isDebugEnabled())
-                            log.debug("Job state changes: dead: " + dead + " run: " + run + " running: " + ProcessManager.running.size());
+                            log.debug("Job state changes: dead: " + dead + " run: " + run + " running: " + KrawnManager.running.size());
 
                     long timeofsleep = System.currentTimeMillis();
                     long wakeuptime = ((timeofsleep / baseSleepTime + 1) * baseSleepTime);
@@ -141,7 +141,7 @@ public class KrawnThread extends Thread {
                     try {
                         String[] cmd = new String[3];
                         for (int i = 0; i < cmd.length - 1; i++) {
-                            cmd[i] = ProcessManager.cmd_setup[i];
+                            cmd[i] = KrawnManager.cmd_setup[i];
                         }
                         cmd[2] = j.cron.command;
                         StartedProcess startProc = new ProcessExecutor().directory(new File(j.cron.workingDir)).environment(j.cron.env).command(cmd)

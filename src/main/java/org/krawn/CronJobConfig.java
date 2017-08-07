@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.joda.time.DateTimeZone;
+
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 
@@ -15,6 +17,7 @@ public class CronJobConfig {
     final public long timeoutms;
     final public boolean exclusive;
     final public String workingDir;
+    final public DateTimeZone tz;
     final Map<String, String> env;
 
     public CronJobConfig(final Config c) {
@@ -24,6 +27,8 @@ public class CronJobConfig {
         this.timeoutms = c.getDuration("timeout", TimeUnit.MILLISECONDS);
         this.exclusive = c.getBoolean("exclusive");
         this.workingDir = c.getString("workingDir");
+        this.tz = DateTimeZone.forID(c.getString("timezone"));
+        // TODO: tz support
         
         env = new HashMap();
         if (c.hasPath("env")) {

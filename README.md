@@ -16,6 +16,7 @@ cron : {
 			env {                             # optionally env variables can be set per process spawned
 				testvar="xyz"
 			}
+			timezone="America/Chicago"
 		}
 		{ 
 			name: simple_unix_example
@@ -23,6 +24,7 @@ cron : {
 			command="wc krawn.conf"
 			timeout=5s
 			exclusive=true
+			timezone="UTC"
 		}
 	]
 }
@@ -39,7 +41,7 @@ Krawn will capture std error and std out to the logback file for you so you don'
 
 Krawn supports "second" level timing.  The first entry in the schedule spec is for seconds, so you can have a job that runs every 5 seconds if you need.
 
-The schedule spec works most like vixie cron format, but any spec elements left out are assumed *'ed.  
+The schedule spec works most like vixie cron format, but any later spec elements left out are assumed to be *.  
 
 ORDER is different.  This order is thought to be most common thing to set first.
 

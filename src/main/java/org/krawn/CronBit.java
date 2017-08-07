@@ -121,7 +121,6 @@ public class CronBit {
     private long populateSet(int lo, int hi, long base, int interval) {
         long tmp = 0L;
         for (int i = lo; i < hi + 1; i+=interval) {
-            log.info("pop: " + i);
             tmp |= base << i;
         }
         return tmp;
@@ -196,7 +195,15 @@ public class CronBit {
     public static void main(String[] args) {
         try {
             // testCase("2017/07/08-23:15:03", "* * * *");
-
+            CronBit sc = new CronBit("5 10 4,5,6 *");
+            long start = System.currentTimeMillis();
+            long it =10000000;
+            for( long i=0; i<it; i++ ) {
+                BitCheck bc = new BitCheck(new DateTime(System.currentTimeMillis()+i, DateTimeZone.UTC));
+                sc.hit(bc);
+            }
+            long end = System.currentTimeMillis();
+            System.out.printf("%d / sec\n", (it*1000)/(end-start));
             testCase("2017/08/31-23:15:02", "2 15 23 * * 8");
         } catch (ParseException e) {
             // TODO Auto-generated catch block

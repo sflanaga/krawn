@@ -25,11 +25,11 @@ public class ReadConfigThread extends Thread {
 
     public void updateConfig() throws IOException {
         thistime = Files.getLastModifiedTime(Paths.get(filename)).toMillis();
-        if (thistime != ProcessManager.lastmod) {
+        if (thistime != KrawnManager.lastmod) {
             log.info("conf file new - reading...");
-            ProcessManager.lastmod = thistime;
-            ProcessManager.listholder.set(readConfig(filename));
-            log.info("Config ACCEPTED - job list updated {}", ProcessManager.listholder.get().size());
+            KrawnManager.lastmod = thistime;
+            KrawnManager.listholder.set(readConfig(filename));
+            log.info("Config ACCEPTED - job list updated {}", KrawnManager.listholder.get().size());
         }      
     }
     long thistime = 0L;
@@ -40,18 +40,18 @@ public class ReadConfigThread extends Thread {
         while (true) {
             try {
                 if (!Files.exists(Paths.get(filename))) {
-                    ProcessManager.lastmod = thistime;
-                    ProcessManager.log.error(filename + " config file is missing");
+                    KrawnManager.lastmod = thistime;
+                    KrawnManager.log.error(filename + " config file is missing");
                 } else {
                     updateConfig();
                 }
-                Thread.sleep(ProcessManager.configPollTime);
+                Thread.sleep(KrawnManager.configPollTime);
             } catch (InterruptedException e) {
                 break;
             } catch (Exception e) {
-                log.error("error reading config {}", e.toString());
+                log.error("error reading config - NOT ACCEPTED {}", e.toString());
             } catch (Throwable e) {
-                log.error("SERVER error {}, {}, {} ", e.getMessage(), thistime, ProcessManager.lastmod);
+                log.error("SERVER error {}, {}, {} ", e.getMessage(), thistime, KrawnManager.lastmod);
             }
         }
     }
@@ -63,8 +63,8 @@ public class ReadConfigThread extends Thread {
         long readend = System.currentTimeMillis();
         log.info("config read time: " + Util.longSpanToStringShort(readend - start,1));
 
-        ProcessManager.reaperPollTime = conf.getDuration("cron.reaperPollTime", TimeUnit.MILLISECONDS); 
-        ProcessManager.configPollTime = conf.getDuration("cron.configPollTime", TimeUnit.MILLISECONDS); 
+        KrawnManager.reaperPollTime = conf.getDuration("cron.reaperPollTime", TimeUnit.MILLISECONDS); 
+        KrawnManager.configPollTime = conf.getDuration("cron.configPollTime", TimeUnit.MILLISECONDS); 
 
         for (Config cfg : conf.getConfigList("cron.jobs")) {
             CronJobConfig c = new CronJobConfig(cfg);
