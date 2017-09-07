@@ -96,7 +96,7 @@ public class KrawnThread extends Thread {
                     long wakeuptime = ((timeofsleep / baseSleepTime + 1) * baseSleepTime);
 
                     if (log.isDebugEnabled())
-                        log.info("pass time: " + (timeofsleep - now));
+                        log.debug("pass time: " + (timeofsleep - now));
 
                     //
                     // Thread.sleep can wake up early so you must spin until you get to the finish line

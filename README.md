@@ -41,9 +41,21 @@ Krawn will capture std error and std out to the logback file for you so you don'
 
 Krawn supports "second" level timing.  The first entry in the schedule spec is for seconds, so you can have a job that runs every 5 seconds if you need.
 
-The schedule spec works most like vixie cron format, but any later spec elements left out are assumed to be *.  
+Each element of the schedule works much like vixie cron.
 
-ORDER is different.  This order is thought to be most common thing to set first.
+`5/*` =  run every 5 second
+
+`5 1,2,3` = run on 1, 2 or 3rd minute at 5 seconds into the minute
+
+`0 5-23` = run at minute 5 thru 23
+
+`*` = run every minute
+ 
+`0 0 12` = run at midnight
+
+The schedule spec works most like vixie cron format, but any later schedule elements missing are assumed to be *.  
+
+ORDER of the schedule spec is a bit different.  This order is thought to have most common things to be set first.
 
 All time is GMT/UTC based - NOT local.  
 
