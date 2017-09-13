@@ -49,9 +49,9 @@ Each element of the schedule works much like vixie cron.
 
 `0 5-23` = run at minute 5 thru 23
 
-`*` = run every minute
+`*` = run every second
  
-`0 0 12` = run at midnight
+`0 0 12` = run at noon
 
 The schedule spec works most like vixie cron format, but any later schedule elements missing are assumed to be *.  
 
@@ -72,7 +72,7 @@ All time is GMT/UTC based - NOT local.
  * * * * * *
 ```
 
-examples:
+More examples:
 
 Run a job once a day just 5 seconds after midnight:
 
