@@ -19,6 +19,7 @@ public class CronJobConfig {
     final public String workingDir;
     final public DateTimeZone tz;
     final Map<String, String> env;
+    final public boolean mapErrorToERROR;
 
     public CronJobConfig(final Config c) {
         this.name = c.getString("name");
@@ -29,7 +30,7 @@ public class CronJobConfig {
         this.workingDir = c.getString("workingDir");
         this.tz = DateTimeZone.forID(c.getString("timezone"));
         // TODO: tz support
-        
+
         env = new HashMap();
         if (c.hasPath("env")) {
             Set<Map.Entry<String, ConfigValue>> s = c.getConfig("env").entrySet();
@@ -38,6 +39,10 @@ public class CronJobConfig {
             }
         }
 
+        if (c.hasPath("mapErrorToERROR"))
+            mapErrorToERROR = c.getBoolean("mapErrorToERROR");
+        else
+            mapErrorToERROR = true;
     }
 
     @Override

@@ -10,6 +10,10 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+version = '1.0'
+
 // In this section you declare where to find the dependencies of your project
 repositories {
     // Use jcenter for resolving your dependencies.
@@ -40,4 +44,49 @@ dependencies {
     // Use JUnit test framework
     testImplementation 'junit:junit:4.12'
 }
+
+jar {
+    manifest {
+        attributes (
+        	"Main-Class": "org.krawn.KrawnManager",
+        	"Implementation-Title": "krawn",
+        	"Implementation-Version": version,
+        	"Build-Host": getDesc(),
+        	"Class-Path": './ ' + configurations.compile.collect { 'lib/' + it.getName() }.join(' ')
+        )
+    }
+}
+
+
+task thirdParty( type: Copy, dependsOn: 'compileJava') {
+    into "./build/depjars"
+    from configurations.runtime
+}
+
+
+def getBuildNumber() {
+        def os = new ByteArrayOutputStream()
+        exec {
+                // change to 'hg id -i' for the global revision id
+                // change to 'git rev-parse HEAD' for git hash
+                commandLine 'hg id -n -i -b -t'.split()
+                standardOutput = os;
+        }
+        return os.toString().trim()
+}
+
+def getDesc() {
+        def buildtime = (new Date()).format('yyyy-MM-dd HH:mm')
+        def opersys = System.properties['os.name'] + ' ' + System.properties['os.version']
+        def user = System.properties['user.name']
+        def javaver = System.properties['java.specification.version']
+        return "Sprint" + "  buildtime: " + buildtime +
+                "  os: " + opersys +
+                "  built by:" + user +
+                "  javaver:" + javaver +
+                "  hostname/ip: " + InetAddress.getLocalHost().getHostName() + " / " + InetAddress.getLocalHost().getHostAddress() +
+                "  buildrev: NA"  +
+                "  project_dir: " + projectDir
+}
+
 

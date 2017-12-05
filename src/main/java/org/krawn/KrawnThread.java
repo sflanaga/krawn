@@ -144,8 +144,14 @@ public class KrawnThread extends Thread {
                             cmd[i] = KrawnManager.cmd_setup[i];
                         }
                         cmd[2] = j.cron.command;
-                        StartedProcess startProc = new ProcessExecutor().directory(new File(j.cron.workingDir)).environment(j.cron.env).command(cmd)
+                        StartedProcess startProc = null;
+                        if ( j.cron.mapErrorToERROR ) 
+                            startProc = new ProcessExecutor().directory(new File(j.cron.workingDir)).environment(j.cron.env).command(cmd)
                                 .redirectOutput(Slf4jStream.of(j.cron.name).asInfo()).redirectError(Slf4jStream.of(j.cron.name).asError()).start();
+                        else
+                            startProc = new ProcessExecutor().directory(new File(j.cron.workingDir)).environment(j.cron.env).command(cmd)
+                            .redirectOutput(Slf4jStream.of(j.cron.name).asInfo()).redirectError(Slf4jStream.of(j.cron.name).asInfo()).start();
+                            
                         j.startedProc = startProc;
                     } catch (IOException e) {
                         log.error("IO except during proc start for: " + j.cron.name + " command: " + j.cron.command);
