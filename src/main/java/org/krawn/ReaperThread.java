@@ -7,6 +7,7 @@ import org.krawn.KrawnManager.JobInfoTrack;
 import org.krawn.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.zeroturnaround.process.PidUtil;
 import org.zeroturnaround.process.ProcessUtil;
 import org.zeroturnaround.process.Processes;
 
@@ -40,7 +41,8 @@ public class ReaperThread extends Thread {
                     for (JobInfoTrack job : tocheck) {
                         long delta = now - job.startTime;
                         if (delta > job.cron.timeoutms) {
-                            log.warn("job name: " + job.cron.name + " timing out at life time: " + Util.longSpanToStringShort(delta, 2));
+                            int pid = PidUtil.getPid(job.startedProc.getProcess());
+                            log.warn("job name: " + job.cron.name + " pid: " + pid + " timing out at life time: " + Util.longSpanToStringShort(delta, 2) );
                             try {
                                 ProcessUtil.destroyGracefullyOrForcefullyAndWait(Processes.newStandardProcess(job.startedProc.getProcess()), 5000, TimeUnit.MILLISECONDS, 1000,
                                         TimeUnit.MILLISECONDS);

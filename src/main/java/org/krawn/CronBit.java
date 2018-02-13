@@ -28,7 +28,7 @@ public class CronBit {
         String timeParts[] = cronlike.split("\\s+");
         try {
             if (timeParts.length < 1)
-                throw new RuntimeException("error creating cron for " + cronlike + " as it is missing one at least the seconds portion of the potential 4 time parts");
+                throw new RuntimeException("error creating cron for " + cronlike + " as it is missing one at least the seconds portion of the potential 6 time parts");
 
             seconds = parsePart(timeParts[0], 0, 59, 1L, "seconds");
 
