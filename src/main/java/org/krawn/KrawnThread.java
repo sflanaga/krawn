@@ -47,7 +47,7 @@ public class KrawnThread extends Thread {
                     //
                     ArrayList<JobInfoTrack> deadProc = new ArrayList<>();
                     for (JobInfoTrack runningJob : KrawnManager.running.values()) {
-                        if (runningJob.startedProc != null && !runningJob.startedProc.getProcess().isAlive()) {
+                        if (runningJob.startedProc != null && !runningJob.startedProc.getProcess().isAlive() || runningJob.startedProc == null) {
                             deadProc.add(runningJob);
                         }
                     }
@@ -55,8 +55,12 @@ public class KrawnThread extends Thread {
                     KrawnManager.lock.lock();
                     try {
                         for (JobInfoTrack deadJob : deadProc) {
-                            log.info(deadJob.cron.name + " finished in " + Util.longSpanToStringShort(now - deadJob.startTime, 2) + " exit code: "
-                                    + deadJob.startedProc.getProcess().exitValue());
+                            if (deadJob.startedProc == null)
+                                log.error(deadJob.cron.name + " failed to start at all - no exit value");
+                            else
+                                log.info(deadJob.cron.name + " finished in " + Util.longSpanToStringShort(now - deadJob.startTime, 2) + " exit code: "
+                                        + deadJob.startedProc.getProcess().exitValue());
+
                             KrawnManager.running.remove(deadJob.cron.name);
                             dead++;
                         }
@@ -145,13 +149,14 @@ public class KrawnThread extends Thread {
                         }
                         cmd[2] = j.cron.command;
                         StartedProcess startProc = null;
-                        if ( j.cron.mapErrorToERROR ) 
-                            startProc = new ProcessExecutor().directory(new File(j.cron.workingDir)).environment(j.cron.env).command(cmd)
-                                .redirectOutput(Slf4jStream.of(j.cron.name).asInfo()).redirectError(Slf4jStream.of(j.cron.name).asError()).start();
+                        j.startedProc = null;
+                        if (j.cron.mapErrorToERROR)
+                            startProc = new ProcessExecutor().directory(j.cron.workingDir.toFile()).environment(j.cron.env).command(cmd)
+                                    .redirectOutput(Slf4jStream.of(j.cron.name).asInfo()).redirectError(Slf4jStream.of(j.cron.name).asError()).start();
                         else
-                            startProc = new ProcessExecutor().directory(new File(j.cron.workingDir)).environment(j.cron.env).command(cmd)
-                            .redirectOutput(Slf4jStream.of(j.cron.name).asInfo()).redirectError(Slf4jStream.of(j.cron.name).asInfo()).start();
-                            
+                            startProc = new ProcessExecutor().directory(j.cron.workingDir.toFile()).environment(j.cron.env).command(cmd)
+                                    .redirectOutput(Slf4jStream.of(j.cron.name).asInfo()).redirectError(Slf4jStream.of(j.cron.name).asInfo()).start();
+
                         j.startedProc = startProc;
                     } catch (IOException e) {
                         log.error("IO except during proc start for: " + j.cron.name + " command: " + j.cron.command);

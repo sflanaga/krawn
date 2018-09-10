@@ -30,13 +30,14 @@ public class ReadConfigThread extends Thread {
             KrawnManager.lastmod = thistime;
             KrawnManager.listholder.set(readConfig(filename));
             log.info("Config ACCEPTED - job list updated {}", KrawnManager.listholder.get().size());
-        }      
+        }
     }
+
     long thistime = 0L;
+
     @Override
     public void run() {
 
-        
         while (true) {
             try {
                 if (!Files.exists(Paths.get(filename))) {
@@ -55,29 +56,34 @@ public class ReadConfigThread extends Thread {
             }
         }
     }
+
     public static TreeMap<String, CronJobConfig> readConfig(String filename) {
         TreeMap<String, CronJobConfig> newlist = new TreeMap<>();
 
         long start = System.currentTimeMillis();
         Config conf = ConfigFactory.load(ConfigFactory.parseFile(new File(filename))); // confraw.resolve();
         long readend = System.currentTimeMillis();
-        log.info("config read time: " + Util.longSpanToStringShort(readend - start,1));
+        log.info("config read time: " + Util.longSpanToStringShort(readend - start, 1));
 
-        KrawnManager.reaperPollTime = conf.getDuration("cron.reaperPollTime", TimeUnit.MILLISECONDS); 
-        KrawnManager.configPollTime = conf.getDuration("cron.configPollTime", TimeUnit.MILLISECONDS); 
+        KrawnManager.reaperPollTime = conf.getDuration("cron.reaperPollTime", TimeUnit.MILLISECONDS);
+        KrawnManager.configPollTime = conf.getDuration("cron.configPollTime", TimeUnit.MILLISECONDS);
 
+        int dis_count = 0;
         for (Config cfg : conf.getConfigList("cron.jobs")) {
             CronJobConfig c = new CronJobConfig(cfg);
             if (newlist.containsKey(c.name))
                 throw new RuntimeException("Duplicate job name: " + c.name);
-            newlist.put(c.name, c);
+            if (!c.disable)
+                newlist.put(c.name, c);
+            else
+                dis_count++;
         }
         long end = System.currentTimeMillis();
 
-        log.info("interpret time: " + Util.longSpanToStringShort(end - readend,1));
+        log.warn("Seeing disabled jobs: " + dis_count);
+        log.info("interpret time: " + Util.longSpanToStringShort(end - readend, 1));
         return newlist;
 
     }
-
 
 }

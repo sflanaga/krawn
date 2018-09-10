@@ -1,5 +1,8 @@
 package org.krawn;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -11,23 +14,34 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 
 public class CronJobConfig {
+    final public boolean disable;
     final public String name;
     final public CronBit schedule;
     final public String command;
     final public long timeoutms;
     final public boolean exclusive;
-    final public String workingDir;
+    final public Path workingDir;
     final public DateTimeZone tz;
     final Map<String, String> env;
     final public boolean mapErrorToERROR;
 
     public CronJobConfig(final Config c) {
+        if ( c.hasPath("disable") )
+            disable = c.getBoolean("disable");
+        else
+            disable = false;
+
         this.name = c.getString("name");
         this.schedule = new CronBit(c.getString("schedule"));
         this.command = c.getString("command");
         this.timeoutms = c.getDuration("timeout", TimeUnit.MILLISECONDS);
         this.exclusive = c.getBoolean("exclusive");
-        this.workingDir = c.getString("workingDir");
+        this.workingDir = Paths.get(c.getString("workingDir"));
+        if ( !Files.exists(this.workingDir) )
+            throw new RuntimeException("working directory does not exist: " + this.workingDir);
+        else if ( !Files.isDirectory(this.workingDir) )
+            throw new RuntimeException("working directory is not a directory: " + this.workingDir);
+        
         this.tz = DateTimeZone.forID(c.getString("timezone"));
         // TODO: tz support
 
@@ -43,6 +57,7 @@ public class CronJobConfig {
             mapErrorToERROR = c.getBoolean("mapErrorToERROR");
         else
             mapErrorToERROR = true;
+        
     }
 
     @Override
